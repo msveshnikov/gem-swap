@@ -93,3 +93,6 @@ Upload from the built-in browser: serve the repo with a local CORS server on 127
 `input[type=file]` from a fetched blob (see the Magic Bottles / Hot Bag project memory for the snippet).
 Release flow: Тестирование и выпуск → Рабочая версия → Создать выпуск → upload AAB → notes → Далее → Сохранить →
 Обзор публикации (pre-check ~15 min) → Отправить на проверку.
+Store listing: `store-listings/default/edit` (Следующий язык → ru-RU). Upload screenshots ONE at a time (a batch lands in
+upload-completion order). Since 2.1.0 the screenshots show ChatGPT backgrounds: on the Отзыв step choose «Пометить
+ресурсы как созданные … с помощью ИИ» and tick the new screenshots. How to order ChatGPT art: see `decisions.md`.
