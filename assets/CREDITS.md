@@ -16,9 +16,8 @@
 
 ## Music
 
-`music.ogg` — "Crystal Cave (song18)" by cynicmusic, [OpenGameArt](https://opengameart.org/content/crystal-cave-song18), CC0.
-An original Suno soundtrack "Gem Swap" was generated for the game (two takes in the owner's Suno library); `scripts/sfx.gd`
-prefers `music.mp3` if it is added.
+`music.mp3` — "Gem Swap", an original soundtrack generated for this game with Suno (v6-mini) on the owner's account
+(https://suno.com/song/714a3a8c-cda5-47aa-af08-c68dff92a2a8). Earlier builds shipped "Crystal Cave (song18)" by cynicmusic (CC0).
 
 ## Fonts
 
@@ -27,5 +26,6 @@ Nunito and Lobster — Google Fonts, SIL Open Font License 1.1 (`assets/fonts/OF
 ## Art
 
 All gems (8 cuts + the prism) and the stone block are rendered in Blender Cycles by `blender/scripts/render_gems.py`
-(8 light angles per gem for the glints). World backgrounds are procedural shaders (`shaders/background.gdshader`),
+(8 light angles per gem for the glints). World backgrounds (`assets/bg/`) were painted for this game with ChatGPT image generation on the owner's account
+(prompts in `art/bg_prompts.json`); the procedural shader `shaders/background.gdshader` is the fallback underneath;
 effects are code (`scripts/fx.gd`). App icon is composed from the gem renders by `tools/make_icon.py`.

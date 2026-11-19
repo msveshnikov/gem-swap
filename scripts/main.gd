@@ -2,12 +2,18 @@ extends Node2D
 ## Game flow: title -> world map -> level (or Blitz) -> win / lose. All UI is built in code (UiKit).
 
 const BG_SHADER := preload("res://shaders/background.gdshader")
+const PHOTO_SHADER := preload("res://shaders/bg_image.gdshader")
+const BG_VARIANTS := 8          # painted backgrounds per world: assets/bg/<world>_<n>.jpg
 const BLITZ_TIME := 90.0
 const HUMAN_BUFFER := 3     # calibration adds these moves on top of what the bot needs
 
 var bg_layer: CanvasLayer
 var bg: ColorRect
 var bg_mat: ShaderMaterial
+var photo: ColorRect          # painted background over the procedural one
+var photo_mat: ShaderMaterial
+var photo_name := ""
+var photo_dim := 0.0
 var ambient: CPUParticles2D
 var deco: Node2D             # falling gems on the title screen
 var board: Board
@@ -43,6 +49,8 @@ var tip_pill: PanelContainer
 var _log := PackedStringArray()
 var _reset_armed := false
 var _deco_timer := 0.0
+var _relayout_at := 0
+var _laid_out_for := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -57,6 +65,13 @@ func _ready() -> void:
 	bg.material = bg_mat
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg_layer.add_child(bg)
+	photo = ColorRect.new()
+	photo_mat = ShaderMaterial.new()
+	photo_mat.shader = PHOTO_SHADER
+	photo.material = photo_mat
+	photo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	photo.visible = false
+	bg_layer.add_child(photo)
 	deco = Node2D.new()
 	add_child(deco)
 	board = Board.new()
@@ -87,6 +102,20 @@ func _ready() -> void:
 		show_title()
 
 
+## Screen insets (left, top, right, bottom) in viewport units: the display cutout / rounded corners on phones, so no
+## button sits under the camera hole or gets clipped by a corner. Desktop and web: zero.
+func insets() -> Vector4:
+	if not OS.has_feature("mobile") or OS.has_feature("web"):
+		return Vector4.ZERO
+	var win := Vector2(DisplayServer.window_get_size())
+	var safe := Rect2(DisplayServer.get_display_safe_area())
+	if win.x <= 0 or safe.size.x <= 0:
+		return Vector4.ZERO
+	var k := vsize().x / win.x
+	var v := Vector4(safe.position.x, safe.position.y, win.x - safe.end.x, win.y - safe.end.y) * k
+	return v.clamp(Vector4.ZERO, Vector4(200, 200, 200, 200))
+
+
 func vsize() -> Vector2:
 	return get_viewport().get_visible_rect().size
 
@@ -101,20 +130,65 @@ func _on_resize() -> void:
 	bg.position = Vector2.ZERO
 	bg.size = s
 	bg_mat.set_shader_parameter("aspect", Vector2(s.x / s.y, 1.0))
+	photo.position = Vector2.ZERO
+	photo.size = s
+	photo_mat.set_shader_parameter("screen", s)
 	if ambient:
 		_place_ambient()
 	if screen == "game":
 		_layout_game()
-	elif screen != "":
-		var sc := screen
-		match sc:
-			"title":
-				show_title()
-			"map":
-				show_map(browse_world)
+	# Rebuild the screen once the size has settled (mobile browsers and Android send several sizes in a row).
+	_relayout_at = Time.get_ticks_msec() + 120
+
+
+func _relayout() -> void:
+	_relayout_at = 0
+	var s := vsize()
+	if s == _laid_out_for:
+		return
+	_laid_out_for = s
+	match screen:
+		"title":
+			show_title()
+		"map":
+			show_map(browse_world)
+		"game":
+			if overlay == null and not ended:
+				_build_hud()
+				_refresh_goals()
+				lbl_score.text = str(int(shown_score))
+				score_bar.value = shown_score
+			_layout_game()
 
 
 # ================================================================ world look
+
+## Painted background by name (assets/bg/<name>.jpg), cross-faded; `dim` darkens it under the board.
+func set_backdrop(name: String, dim := 0.0) -> void:
+	var path := "res://assets/bg/%s.jpg" % name
+	var t := create_tween()
+	t.tween_method(func(v): photo_mat.set_shader_parameter("dim", v), photo_dim, dim, 0.5)
+	photo_dim = dim
+	if name == photo_name:
+		return
+	if not ResourceLoader.exists(path):
+		photo.visible = false
+		photo_name = ""
+		return
+	var tex: Texture2D = load(path)
+	var old = photo_mat.get_shader_parameter("tex_b")
+	photo_mat.set_shader_parameter("tex_a", old if old != null and photo.visible else tex)
+	photo_mat.set_shader_parameter("tex_b", tex)
+	photo_mat.set_shader_parameter("img_aspect", float(tex.get_width()) / tex.get_height())
+	photo.visible = true
+	photo_name = name
+	photo_mat.set_shader_parameter("mixv", 0.0)
+	t.parallel().tween_method(func(v): photo_mat.set_shader_parameter("mixv", v), 0.0, 1.0, 0.7)
+
+
+func level_backdrop(idx: int) -> String:
+	return "%s_%d" % [Game.WORLDS[Game.world_of(idx)].id, (idx % Game.PER_WORLD) % BG_VARIANTS]
+
 
 func set_world(w: int) -> void:
 	w = w % Game.WORLDS.size()
@@ -210,6 +284,11 @@ func _clear_ui() -> void:
 	overlay = null
 	root = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var ins := insets()
+	root.offset_left = ins.x
+	root.offset_top = ins.y
+	root.offset_right = -ins.z
+	root.offset_bottom = -ins.w
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(root)
 	fly_layer = Control.new()
@@ -219,22 +298,20 @@ func _clear_ui() -> void:
 
 
 func _place(c: Control, preset: int, offset := Vector2.ZERO) -> void:
+	# Anchors from the preset, offsets written directly (relative to the anchor), so the result never depends on the
+	# parent's size at the moment of placing: on the web and on Android the first frames can report a stale size.
 	root.add_child(c)
 	c.reset_size()
-	c.size = c.get_combined_minimum_size()
-	c.set_anchors_and_offsets_preset(preset, Control.PRESET_MODE_MINSIZE)
-	c.position += offset
-	if preset in [Control.PRESET_CENTER_TOP, Control.PRESET_CENTER_BOTTOM, Control.PRESET_CENTER]:
-		c.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		var w := maxf(c.size.x, c.get_combined_minimum_size().x)
-		c.offset_left = -w * 0.5 + offset.x
-		c.offset_right = w * 0.5 + offset.x
-	if preset in [Control.PRESET_TOP_RIGHT, Control.PRESET_CENTER_RIGHT, Control.PRESET_BOTTOM_RIGHT]:
-		c.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	if preset in [Control.PRESET_CENTER_BOTTOM, Control.PRESET_BOTTOM_LEFT, Control.PRESET_BOTTOM_RIGHT]:
-		c.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	if preset in [Control.PRESET_CENTER_LEFT, Control.PRESET_CENTER_RIGHT, Control.PRESET_CENTER]:
-		c.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var sz := c.get_combined_minimum_size().max(c.custom_minimum_size)
+	c.set_anchors_preset(preset)
+	var left := -sz.x * c.anchor_left + offset.x
+	var top := -sz.y * c.anchor_top + offset.y
+	c.offset_left = left
+	c.offset_right = left + sz.x
+	c.offset_top = top
+	c.offset_bottom = top + sz.y
+	c.grow_horizontal = [Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BEGIN][roundi(c.anchor_left * 2.0)]
+	c.grow_vertical = [Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BOTH, Control.GROW_DIRECTION_BEGIN][roundi(c.anchor_top * 2.0)]
 
 
 func show_title() -> void:
@@ -243,6 +320,7 @@ func show_title() -> void:
 	board.visible = false
 	board.input_enabled = false
 	set_world(5 if world < 0 else world)
+	set_backdrop("title")
 	_clear_ui()
 	var s := vsize()
 	var v := VBoxContainer.new()
@@ -277,11 +355,11 @@ func show_title() -> void:
 	v.add_child(best)
 	var gear := UiKit.IconButton.new("gear", Color(0.45, 0.35, 0.8), 92)
 	gear.pressed.connect(_show_settings)
-	_place(gear, Control.PRESET_TOP_RIGHT, Vector2(-24, 24))
+	_place(gear, Control.PRESET_TOP_RIGHT, Vector2(-32, 32))
 	var stars := HBoxContainer.new()
 	stars.add_child(UiKit.Star.new(44))
 	stars.add_child(UiKit.label(" %d" % Game.total_stars(), 38, Color(1, 0.9, 0.5), 8))
-	_place(stars, Control.PRESET_TOP_LEFT, Vector2(28, 36))
+	_place(stars, Control.PRESET_TOP_LEFT, Vector2(34, 40))
 	for k in v.get_child_count():
 		UiKit.pop_in(v.get_child(k), 0.05 * k)
 
@@ -294,6 +372,8 @@ func _center(v: VBoxContainer, c: Control) -> void:
 
 
 func _process(delta: float) -> void:
+	if _relayout_at > 0 and Time.get_ticks_msec() >= _relayout_at:
+		_relayout()
 	# title screen: gems drift down behind the logo
 	if screen == "title" or screen == "map":
 		_deco_timer -= delta
@@ -338,6 +418,7 @@ func show_map(w: int) -> void:
 	board.input_enabled = false
 	browse_world = clampi(w, 0, Game.WORLDS.size() - 1)
 	set_world(browse_world)
+	set_backdrop("%s_0" % Game.WORLDS[browse_world].id, 0.1)
 	_clear_ui()
 	var s := vsize()
 	var head := VBoxContainer.new()
@@ -349,11 +430,11 @@ func show_map(w: int) -> void:
 	_place(head, Control.PRESET_CENTER_TOP, Vector2(0, 40))
 	var home := UiKit.IconButton.new("home", Color(0.45, 0.35, 0.8), 92)
 	home.pressed.connect(show_title)
-	_place(home, Control.PRESET_TOP_LEFT, Vector2(24, 24))
+	_place(home, Control.PRESET_TOP_LEFT, Vector2(30, 30))
 	var stars := HBoxContainer.new()
 	stars.add_child(UiKit.Star.new(40))
 	stars.add_child(UiKit.label(" %d" % Game.total_stars(), 34, Color(1, 0.9, 0.5), 8))
-	_place(stars, Control.PRESET_TOP_RIGHT, Vector2(-28, 40))
+	_place(stars, Control.PRESET_TOP_RIGHT, Vector2(-34, 44))
 	# level path
 	var path := MapPath.new()
 	path.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -458,6 +539,7 @@ func start_level(idx: int) -> void:
 	moves_left = int(level.moves)
 	_start_common()
 	set_world(Game.world_of(idx))
+	set_backdrop(level_backdrop(idx), 0.18)
 	_build_hud()
 	_show_start_popup()
 
@@ -469,6 +551,7 @@ func start_blitz() -> void:
 	time_left = BLITZ_TIME
 	_start_common()
 	set_world(randi() % Game.WORLDS.size())
+	set_backdrop("map", 0.25)
 	_build_hud()
 	board.input_enabled = true
 	playing = true
@@ -495,7 +578,7 @@ func _build_hud() -> void:
 	var s := vsize()
 	var pause := UiKit.IconButton.new("pause", Color(0.45, 0.35, 0.8), 84)
 	pause.pressed.connect(_show_pause)
-	_place(pause, Control.PRESET_TOP_LEFT, Vector2(18, 18))
+	_place(pause, Control.PRESET_TOP_LEFT, Vector2(24, 22))
 	var title := VBoxContainer.new()
 	title.add_theme_constant_override("separation", -6)
 	if mode == "blitz":
@@ -597,11 +680,13 @@ func _layout_game() -> void:
 	var s := vsize()
 	var rect: Rect2
 	if landscape():
-		var left := minf(s.x * 0.36, 520) + 48
-		rect = Rect2(Vector2(left, 30), Vector2(s.x - left - 30, s.y - 60))
+		var ins := insets()
+		var left := minf(s.x * 0.36, 520) + 48 + ins.x
+		rect = Rect2(Vector2(left, 30 + ins.y), Vector2(s.x - left - 30 - ins.z, s.y - 60 - ins.y - ins.w))
 	else:
-		var top := 112.0 + 150.0
-		rect = Rect2(Vector2(22, top + 14), Vector2(s.x - 44, s.y - top - 120))
+		var ins := insets()
+		var top := 112.0 + 150.0 + ins.y
+		rect = Rect2(Vector2(22 + ins.x, top + 14), Vector2(s.x - 44 - ins.x - ins.z, s.y - top - 120 - ins.w))
 	board.fit(rect)
 
 

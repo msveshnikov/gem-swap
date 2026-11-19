@@ -13,7 +13,7 @@ Match-3 puzzle in Godot 4.7 (2D, GL Compatibility): swap Blender-rendered gems, 
 | Live web build | https://severance.lol/9/ = https://maxims.top/gems/ (server symlink `/var/www/maxims/gems -> /var/www/severance/9`) |
 | Android APK | https://severance.lol/9/GemSwap.apk — signed with `~/.android/debug.keystore` |
 | Server folder | `ubuntu@severance.lol:/var/www/severance/9/` (SSH key auth) |
-| Google Play | app "Gem Swap: Match 3 Jewels", package `com.maxsoft.bejeweled`, Play Console app id 4972699497167054865 (dev 5957945224586801272). Before the remake: Cordova 1.1.0 (code 10001) live. 2.0.0 (code 20000) + new en-US listing + ru-RU translation sent for review 2026-11-19 |
+| Google Play | app "Gem Swap: Match 3 Jewels", package `com.maxsoft.bejeweled`, Play Console app id 4972699497167054865 (dev 5957945224586801272). Before the remake: Cordova 1.1.0 (code 10001) live. 2.0.0 (code 20000) + new en-US listing + ru-RU translation sent for review 2026-11-19; 2.1.0 (code 20100, backgrounds + music + phone layout) the same day |
 | Play upload key | `~/.android/gemswap-upload.jks` (alias `my-key-alias`, password in `gemswap-upload.txt`) = the old Cordova key with key password = store password. Godot reads it from `.godot/export_credentials.cfg` (preset.3). Never commit. Original Cordova keystore: `~/.android/gemswap-cordova.keystore` + `.txt`. |
 | Godot exe | `C:\Users\msves\OneDrive\Рабочий стол\Godot_v4.7.2-stable_win64.exe` |
 | Blender exe | `C:\Program Files\Blender Foundation\Blender 5.2\blender.exe` |
@@ -22,7 +22,8 @@ Match-3 puzzle in Godot 4.7 (2D, GL Compatibility): swap Blender-rendered gems, 
 | Icon / splash | `python tools/make_icon.py` (from the gem renders) |
 | Match chimes | `python tools/make_chimes.py` |
 | Sounds, music, fonts | `assets/audio`, `assets/fonts` — sources and licences in `assets/CREDITS.md` |
-| Suno soundtrack (not downloaded) | https://suno.com/song/714a3a8c-cda5-47aa-af08-c68dff92a2a8 (alt take b1634bdb-8824-48b0-bc40-6b9b87dbb800); `sfx.gd` prefers `assets/audio/music.mp3` |
+| Music | `assets/audio/music.mp3` = Suno "Gem Swap" https://suno.com/song/714a3a8c-cda5-47aa-af08-c68dff92a2a8 (downloaded; alt take b1634bdb… not) |
+| Backgrounds | ChatGPT paintings: prompts `art/bg_prompts.json`, originals `art/bg_raw/*.png` (1024x1536) → `python tools/make_backgrounds.py` → `assets/bg/*.jpg`; after the first `--import`, `python tools/make_backgrounds.py --patch-import` (lossy WebP + mipmaps) and `--import` again |
 | Save file | `user://save.json` (Windows: `%APPDATA%\Godot\app_userdata\Gem Swap\`) |
 | Builds | `build/windows/GemSwap.exe`, `build/web/`, `build/android/GemSwap.apk`, `build/play/GemSwap.aab` |
 
@@ -39,7 +40,7 @@ Match-3 puzzle in Godot 4.7 (2D, GL Compatibility): swap Blender-rendered gems, 
 | `scripts/fx.gd` | shards, sparkles, beams, shockwaves, lightning, floating text, confetti, fireworks |
 | `scripts/main.gd` | screens (title, world map, game HUD, start/win/lose/pause/settings), Blitz, autotest, calibration, store shots |
 | `scripts/ui_kit.gd` | fonts, buttons, vector icons, stars, panels, gem icons |
-| `shaders/background.gdshader` | six animated world backdrops; `shaders/gem.gdshader` flash / shine / rainbow |
+| `shaders/background.gdshader` | six procedural world backdrops (fallback + under the paintings); `shaders/bg_image.gdshader` painted backgrounds; `shaders/gem.gdshader` flash / shine / rainbow |
 
 ## Rules
 
@@ -56,6 +57,7 @@ G="/c/Users/msves/OneDrive/Рабочий стол/Godot_v4.7.2-stable_win64.exe
 "$G" --headless --path . --import
 "$G" --path . --quit-after 40000 -- --autotest                       # portrait
 "$G" --path . --resolution 1280x720 --quit-after 40000 -- --autotest # landscape (land_*.png)
+"$G" --path . --resolution 360x800 --quit-after 40000 -- --autotest  # narrow phone (corner buttons, popups)
 ```
 Logic tests (specials, gravity, prism, ice/stones, every level starts with moves), then every screen is shot into
 `renders/game/`, a real drag swap, a refused tap swap, line/bomb/prism combos, win, lose, stones, Blitz.

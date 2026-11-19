@@ -60,3 +60,12 @@ Gem Swap is reborn! A brand-new game: real cut gems, special gems and combos, 60
 <ru-RU>
 Gem Swap — полностью новая игра! Настоящие огранённые камни, особые камни и комбо, 60 уровней в шести живых мирах, режим «Блиц», новая музыка и звуки.
 </ru-RU>
+
+## Release notes 2.1.0
+
+<en-US>
+50 new painted backgrounds: every level now has its own scene. An original soundtrack. Buttons no longer go off the screen edge on phones with notches and rounded corners.
+</en-US>
+<ru-RU>
+50 новых нарисованных фонов: у каждого уровня своя картина. Собственный саундтрек. Кнопки больше не уходят за край экрана на телефонах с вырезом и скруглёнными углами.
+</ru-RU>

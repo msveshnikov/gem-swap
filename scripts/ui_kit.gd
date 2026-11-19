@@ -125,6 +125,9 @@ class IconButton extends Button:
 		kind = k
 		tint = color
 		custom_minimum_size = Vector2(d, d)
+		# never stretched by a row or column: a round button must stay round
+		size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		UiKit.style_button(self, color, int(d * 0.5))
 		UiKit.juice(self)
 

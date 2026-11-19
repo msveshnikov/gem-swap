@@ -19,10 +19,16 @@
 - **Leftover moves become a bonus finale** (line gems that fire one after another), so finishing early always pays.
 - **+5 moves once per level** on the "out of moves" screen (free, no ads).
 - **Blitz 90 s** mode with a best score; big cascades add a second.
-- **Backgrounds are procedural shaders**, not paintings: ordering art from ChatGPT in the built-in browser was blocked
-  in this session's auto mode. Six animated styles (crystals, sunken temple with caustics, dunes at sunset, forest at
-  night, lava forge, nebula), each with its own ambient particles.
+- **Backgrounds are paintings from ChatGPT** (2.1.0): 6 worlds × 8 scenes + title + Blitz panorama, ordered in the
+  built-in browser from `art/bg_prompts.json` (the middle of each picture is kept calm for the board). Level k of a
+  world uses scene k % 8. Portrait screens crop to cover; wide screens show the whole painting over a blurred copy
+  (`shaders/bg_image.gdshader`), with a slow drift and a cross-fade. The procedural shader stays underneath as the
+  fallback and for its ambient particles. In 2.0.0 the backgrounds were procedural only, because ordering art was
+  blocked in that session's auto mode.
 - **Android package kept as `com.maxsoft.bejeweled`** (the existing Google Play app), version 2.0.0 (code 20000,
-  above the live Cordova 1.1.0 / code 10001). The Play AAB is signed with the same key as the old Cordova app.
-- **Music:** a Suno track was generated for the game (2 takes), but downloading needs the owner's last Suno download
-  credit, so a CC0 track ships until the owner approves.
+  above the live Cordova 1.1.0 / code 10001), then 2.1.0 (code 20100). The Play AAB is signed with the same key as the old Cordova app.
+- **Music:** the original Suno track "Gem Swap" (take 714a3a8c…, the owner spent their last download credit on it) is
+  `assets/audio/music.mp3`; the CC0 track from 2.0.0 was removed.
+- **Phones:** the UI root is inset by the display safe area (cutout, rounded corners) on Android, corner buttons sit
+  30+ px from the edges, and `_place()` writes anchor-relative offsets so a stale size on the first web/Android frames
+  cannot push a button off screen; the screen is rebuilt 120 ms after the last resize.

@@ -41,9 +41,10 @@ godot --path . -- --autotest      # self-test, screenshots in renders/game/
 - Gems are rendered in Blender Cycles by [`blender/scripts/render_gems.py`](blender/scripts/render_gems.py), each in
   8 light angles so they glint in the game.
 - Rules: [`scripts/match3.gd`](scripts/match3.gd); animations: [`scripts/board.gd`](scripts/board.gd), [`scripts/fx.gd`](scripts/fx.gd);
-  world backdrops are one procedural shader, [`shaders/background.gdshader`](shaders/background.gdshader).
+  50 painted backgrounds (made with ChatGPT from [`art/bg_prompts.json`](art/bg_prompts.json), shown by
+  [`shaders/bg_image.gdshader`](shaders/bg_image.gdshader)) over a procedural fallback, [`shaders/background.gdshader`](shaders/background.gdshader).
 - Levels: [`tools/gen_levels.py`](tools/gen_levels.py), then an autoplayer tunes move counts and star scores (`-- --calibrate`).
-- Sounds and music are CC0 (see [assets/CREDITS.md](assets/CREDITS.md)); the crystal chimes are synthesized by
+- Original Suno soundtrack; sounds are CC0 (see [assets/CREDITS.md](assets/CREDITS.md)); the crystal chimes are synthesized by
   [`tools/make_chimes.py`](tools/make_chimes.py).
 
 Building, testing and deploying: [AGENTS.md](AGENTS.md). Design decisions: [decisions.md](decisions.md).
