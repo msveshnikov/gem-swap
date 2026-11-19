@@ -13,7 +13,7 @@ Match-3 puzzle in Godot 4.7 (2D, GL Compatibility): swap Blender-rendered gems, 
 | Live web build | https://severance.lol/9/ = https://maxims.top/gems/ (server symlink `/var/www/maxims/gems -> /var/www/severance/9`) |
 | Android APK | https://severance.lol/9/GemSwap.apk — signed with `~/.android/debug.keystore` |
 | Server folder | `ubuntu@severance.lol:/var/www/severance/9/` (SSH key auth) |
-| Google Play | existing app "Gem Swap", package `com.maxsoft.bejeweled` (Cordova 1.2.0 = code 10002 before the remake) |
+| Google Play | app "Gem Swap: Match 3 Jewels", package `com.maxsoft.bejeweled`, Play Console app id 4972699497167054865 (dev 5957945224586801272). Before the remake: Cordova 1.1.0 (code 10001) live. 2.0.0 (code 20000) + new en-US listing + ru-RU translation sent for review 2026-11-19 |
 | Play upload key | `~/.android/gemswap-upload.jks` (alias `my-key-alias`, password in `gemswap-upload.txt`) = the old Cordova key with key password = store password. Godot reads it from `.godot/export_credentials.cfg` (preset.3). Never commit. Original Cordova keystore: `~/.android/gemswap-cordova.keystore` + `.txt`. |
 | Godot exe | `C:\Users\msves\OneDrive\Рабочий стол\Godot_v4.7.2-stable_win64.exe` |
 | Blender exe | `C:\Program Files\Blender Foundation\Blender 5.2\blender.exe` |

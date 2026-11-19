@@ -23,6 +23,6 @@
   in this session's auto mode. Six animated styles (crystals, sunken temple with caustics, dunes at sunset, forest at
   night, lava forge, nebula), each with its own ambient particles.
 - **Android package kept as `com.maxsoft.bejeweled`** (the existing Google Play app), version 2.0.0 (code 20000,
-  above the Cordova 1.2.0 / code 10002). The Play AAB is signed with the same key as the old Cordova app.
+  above the live Cordova 1.1.0 / code 10001). The Play AAB is signed with the same key as the old Cordova app.
 - **Music:** a Suno track was generated for the game (2 takes), but downloading needs the owner's last Suno download
   credit, so a CC0 track ships until the owner approves.
