@@ -1,0 +1,7 @@
+.godot/
+build/
+*.tmp
+renders/
+__pycache__/
+android/
+notes.md
